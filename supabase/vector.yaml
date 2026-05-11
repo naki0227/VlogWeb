@@ -1,0 +1,16 @@
+# Supabase Vector設定（docker-compose.ymlから参照）
+# ローカル開発では最小限の設定
+api:
+  enabled: false
+
+sources:
+  dummy:
+    type: demo_logs
+    format: json
+
+sinks:
+  stdout:
+    type: console
+    inputs: [dummy]
+    encoding:
+      codec: json
