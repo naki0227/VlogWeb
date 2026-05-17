@@ -22,24 +22,31 @@ export default function EditPostPage() {
   const [deleting, setDeleting] = useState(false)
   const [showShare, setShowShare] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) { router.push('/auth/login'); return }
-      const [{ data: post }, { data: pagesData }] = await Promise.all([
-        supabase.from('posts').select('*').eq('id', id).eq('user_id', user.id).single(),
-        supabase.from('pages').select('*').eq('user_id', user.id).order('sort_order'),
-      ])
-      if (!post) { router.push('/dashboard'); return }
-      setCaption(post.caption ?? '')
-      setVisibility(post.visibility)
-      setPageId(post.page_id ?? '')
-      setMediaUrl(post.media_url)
-      setThumbnailUrl(post.thumbnail_url)
-      setMediaType(post.media_type)
-      setPages(pagesData ?? [])
-    })
+    async function loadPost() {
+      setLoading(true)
+      const res = await fetch(`/api/dashboard/posts/${id}`, { cache: 'no-store' })
+      if (res.status === 401) { router.push('/auth/login'); return }
+      if (res.status === 404) {
+        setError('投稿が見つかりませんでした。')
+        setLoading(false)
+        return
+      }
+
+      const data = await res.json()
+      setCaption(data.post.caption ?? '')
+      setVisibility(data.post.visibility)
+      setPageId(data.post.page_id ?? '')
+      setMediaUrl(data.post.media_url)
+      setThumbnailUrl(data.post.thumbnail_url)
+      setMediaType(data.post.media_type)
+      setPages(data.pages ?? [])
+      setLoading(false)
+    }
+
+    loadPost()
   }, [id, router])
 
   async function handleSave(e: React.FormEvent) {
@@ -90,6 +97,11 @@ export default function EditPostPage() {
       </header>
 
       <div className="max-w-2xl mx-auto px-4 py-6">
+        {loading && (
+          <div className="mb-4 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-500">
+            投稿を読み込み中...
+          </div>
+        )}
         <form id="edit-form" onSubmit={handleSave} className="space-y-5">
           {/* プレビュー */}
           {previewUrl && (

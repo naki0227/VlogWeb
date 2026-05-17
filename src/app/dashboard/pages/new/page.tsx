@@ -65,7 +65,7 @@ export default function NewPagePage() {
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
-  const derivedSlug = slugEdited ? slug : slugify(title)
+  const derivedSlug = slugEdited && slug.trim() !== '' ? slug : slugify(title)
 
   function applyTemplate(tpl: PageTemplate) {
     setSelectedTemplate(tpl)
@@ -173,10 +173,14 @@ export default function NewPagePage() {
                 <div className="flex items-center gap-2 rounded-lg bg-zinc-50 px-3 py-2 text-sm ring-1 ring-transparent transition focus-within:bg-white focus-within:ring-zinc-900">
                   <span className="whitespace-nowrap text-zinc-500">yourdomain.com/you/</span>
                   <input value={derivedSlug}
-                    onChange={e => { setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')); setSlugEdited(true) }}
+                    onChange={e => {
+                      const nextSlug = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
+                      setSlug(nextSlug)
+                      setSlugEdited(nextSlug !== '')
+                    }}
                     placeholder="travel" className="min-w-0 flex-1 bg-transparent font-mono text-zinc-950 outline-none placeholder:text-zinc-400" />
                 </div>
-                <p className="mt-1.5 text-xs text-zinc-500">半角英数字と `-` を使えます。空ならタイトルから自動生成します。</p>
+                <p className="mt-1.5 text-xs text-zinc-500">半角英数字と `-` を使えます。空にするとタイトルから自動生成に戻ります。</p>
               </div>
             </div>
           </div>

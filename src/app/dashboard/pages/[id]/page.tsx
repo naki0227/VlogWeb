@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -43,24 +44,31 @@ export default function EditPagePage() {
   const [showShare, setShowShare] = useState(false)
   const [pageTitle, setPageTitle] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) { router.push('/auth/login'); return }
-      const [{ data: page }, { data: pagePosts }] = await Promise.all([
-        supabase.from('pages').select('*').eq('id', id).eq('user_id', user.id).single(),
-        supabase.from('posts').select('*').eq('page_id', id).order('sort_order').order('created_at', { ascending: false }),
-      ])
-      if (!page) { router.push('/dashboard'); return }
-      setTitle(page.title)
-      setPageTitle(page.title)
-      setSlug(page.slug)
-      setDescription(page.description ?? '')
-      setTheme(page.theme as Theme)
-      setIsPublic(page.is_public)
-      setPosts(pagePosts ?? [])
-    })
+    async function loadPage() {
+      setLoading(true)
+      const res = await fetch(`/api/dashboard/pages/${id}`, { cache: 'no-store' })
+      if (res.status === 401) { router.push('/auth/login'); return }
+      if (res.status === 404) {
+        setError('ページが見つかりませんでした。')
+        setLoading(false)
+        return
+      }
+
+      const data = await res.json()
+      setTitle(data.page.title)
+      setPageTitle(data.page.title)
+      setSlug(data.page.slug)
+      setDescription(data.page.description ?? '')
+      setTheme(data.page.theme as Theme)
+      setIsPublic(data.page.is_public)
+      setPosts(data.posts ?? [])
+      setLoading(false)
+    }
+
+    loadPage()
   }, [id, router])
 
   async function handleSave(e: React.FormEvent) {
@@ -99,6 +107,11 @@ export default function EditPagePage() {
       </header>
 
       <div className="max-w-2xl mx-auto px-4 py-6">
+        {loading && (
+          <div className="mb-4 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-500">
+            ページを読み込み中...
+          </div>
+        )}
         <form id="edit-page-form" onSubmit={handleSave} className="space-y-5">
           <div className="bg-white border border-zinc-100 rounded-xl overflow-hidden">
             <div className="p-4 space-y-3">
@@ -145,6 +158,13 @@ export default function EditPagePage() {
             className="w-full py-2.5 border border-zinc-200 text-zinc-700 text-sm rounded-xl hover:border-zinc-400 transition-colors">
             このページの共有リンクを作成
           </button>
+
+          <Link
+            href={`/dashboard/post/new?pageId=${id}`}
+            className="block w-full rounded-xl border border-zinc-200 px-4 py-2.5 text-center text-sm text-zinc-700 transition-colors hover:border-zinc-400"
+          >
+            このページに投稿を追加する
+          </Link>
         </form>
 
         {/* このページの投稿一覧 */}
@@ -153,15 +173,21 @@ export default function EditPagePage() {
             <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide">このページの投稿 ({posts.length})</p>
             <div className="grid grid-cols-3 gap-2">
               {posts.map(post => (
-                <a key={post.id} href={`/dashboard/post/${post.id}`}
+                <Link key={post.id} href={`/dashboard/post/${post.id}`}
                   className="aspect-square bg-zinc-100 rounded-lg overflow-hidden relative group">
                   {post.thumbnail_url || post.media_url
                     ? <img src={post.thumbnail_url ?? post.media_url ?? ''} alt="" className="w-full h-full object-cover" />
                     : <div className="w-full h-full flex items-center justify-center text-zinc-300 text-xl">{post.media_type === 'video' ? '▶' : '□'}</div>}
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-                </a>
+                </Link>
               ))}
             </div>
+          </div>
+        )}
+
+        {posts.length === 0 && !loading && (
+          <div className="mt-8 rounded-xl border border-dashed border-zinc-200 bg-white p-5 text-sm text-zinc-500">
+            このページにはまだ投稿が紐づいていません。投稿作成時か投稿編集画面の「ページ」で、このページを選ぶと追加できます。
           </div>
         )}
 

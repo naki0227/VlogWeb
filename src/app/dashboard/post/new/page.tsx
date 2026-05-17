@@ -28,6 +28,10 @@ export default function NewPostPage() {
 
   useEffect(() => {
     const supabase = createClient()
+    const requestedPageId =
+      typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search).get('pageId')
+        : null
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) { router.push('/auth/login'); return }
       supabase
@@ -35,7 +39,13 @@ export default function NewPostPage() {
         .select('*')
         .eq('user_id', user.id)
         .order('sort_order')
-        .then(({ data }) => setPages(data ?? []))
+        .then(({ data }) => {
+          const nextPages = data ?? []
+          setPages(nextPages)
+          if (requestedPageId && nextPages.some(page => page.id === requestedPageId)) {
+            setPageId(requestedPageId)
+          }
+        })
     })
   }, [router])
 
@@ -270,6 +280,7 @@ export default function NewPostPage() {
               <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-2">
                 ページに追加（任意）
               </p>
+              <p className="mb-3 text-xs text-zinc-500">ここで選ぶと、そのページの中にもこの投稿が表示されます。</p>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
