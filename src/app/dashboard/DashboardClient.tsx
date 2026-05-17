@@ -1,8 +1,10 @@
 'use client'
 
 import Link from 'next/link'
+import { startTransition, useEffect, useState } from 'react'
 import { useAccumulationStage } from '@/hooks/useAccumulationStage'
 import { GhostLayer, GhostCard } from '@/components/accumulation/GhostLayer'
+import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/utils/cn'
 import type { Profile, Post, Page } from '@/types'
 
@@ -30,31 +32,60 @@ function buildGridItems(posts: Post[], ghostPosts: import('@/hooks/useAccumulati
 }
 
 export function DashboardClient({ profile, posts, postCount, pages }: Props) {
+  const [liveProfile, setLiveProfile] = useState<Profile | null>(profile)
+  const [livePosts, setLivePosts] = useState<Post[]>(posts)
+  const [livePostCount, setLivePostCount] = useState(postCount)
+  const [livePages, setLivePages] = useState<Page[]>(pages)
   const { stage, ghostPosts } = useAccumulationStage()
-  const gridItems = buildGridItems(posts, ghostPosts, stage)
+  const gridItems = buildGridItems(livePosts, ghostPosts, stage)
   const onboardingSteps = [
     {
       title: '1. 最初の投稿を追加',
       description: '写真か動画を1つ入れると、サイトの土台ができます。',
       href: '/dashboard/post/new',
-      done: postCount > 0,
+      done: livePostCount > 0,
       cta: '投稿する',
     },
     {
       title: '2. ページを作る',
       description: '旅、カフェ、日常などテーマごとにまとめられます。',
       href: '/dashboard/pages/new',
-      done: pages.length > 0,
+      done: livePages.length > 0,
       cta: 'ページを作る',
     },
     {
       title: '3. 公開方法を決める',
       description: 'まずは限定公開で始めて、慣れたら公開にするのがおすすめです。',
       href: '/dashboard/settings',
-      done: posts.some(p => p.visibility !== 'private') || pages.some(p => p.is_public),
+      done: livePosts.some(p => p.visibility !== 'private') || livePages.some(p => p.is_public),
       cta: '設定を見る',
     },
   ]
+
+  useEffect(() => {
+    const supabase = createClient()
+
+    async function loadLatestDashboard() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const [{ data: nextProfile }, { data: nextPosts, count }, { data: nextPages }] = await Promise.all([
+        supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
+        supabase.from('posts').select('*', { count: 'exact' }).eq('user_id', user.id)
+          .order('created_at', { ascending: false }).limit(30),
+        supabase.from('pages').select('*').eq('user_id', user.id).order('sort_order'),
+      ])
+
+      startTransition(() => {
+        setLiveProfile(nextProfile ?? null)
+        setLivePosts(nextPosts ?? [])
+        setLivePostCount(count ?? 0)
+        setLivePages(nextPages ?? [])
+      })
+    }
+
+    loadLatestDashboard()
+  }, [])
 
   return (
     <div className="min-h-screen bg-zinc-50 relative">
@@ -68,7 +99,7 @@ export function DashboardClient({ profile, posts, postCount, pages }: Props) {
             <Link href="/dashboard/settings" className="text-xs text-zinc-400 hover:text-zinc-600">設定</Link>
           </div>
           <div className="flex items-center gap-3">
-            <a href={`/${profile?.username}`} target="_blank" className="text-sm text-zinc-500 hover:text-zinc-900">
+            <a href={`/${liveProfile?.username}`} target="_blank" className="text-sm text-zinc-500 hover:text-zinc-900">
               サイトを見る →
             </a>
             <Link href="/dashboard/post/new"
@@ -82,10 +113,10 @@ export function DashboardClient({ profile, posts, postCount, pages }: Props) {
       <main className="max-w-4xl mx-auto px-4 py-8 space-y-8 relative z-[1]">
         {/* stats */}
         <div className="grid grid-cols-3 gap-4">
-          {[
-            { label: '投稿数', value: postCount },
-            { label: 'ページ数', value: pages.length },
-            { label: '公開中', value: posts.filter(p => p.visibility === 'public').length },
+            {[
+            { label: '投稿数', value: livePostCount },
+            { label: 'ページ数', value: livePages.length },
+            { label: '公開中', value: livePosts.filter(p => p.visibility === 'public').length },
           ].map(({ label, value }) => (
             <div key={label} className="bg-white rounded-xl p-4 border border-zinc-100">
               <p className="text-2xl font-semibold text-zinc-900">{value}</p>
@@ -128,9 +159,9 @@ export function DashboardClient({ profile, posts, postCount, pages }: Props) {
             <h2 className="text-sm font-medium text-zinc-700">ページ</h2>
             <Link href="/dashboard/pages/new" className="text-sm text-zinc-500 hover:text-zinc-900">+ 追加</Link>
           </div>
-          {pages.length > 0 ? (
+          {livePages.length > 0 ? (
             <div className="flex flex-wrap gap-2">
-              {pages.map(page => (
+              {livePages.map(page => (
                 <Link key={page.id} href={`/dashboard/pages/${page.id}`}
                   className="px-3 py-1.5 bg-white border border-zinc-200 rounded-full text-sm text-zinc-700 hover:border-zinc-400 transition-colors">
                   {page.title}
