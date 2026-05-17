@@ -5,6 +5,18 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
+function formatSignupError(message: string) {
+  if (message === 'Database error saving new user') {
+    return '登録処理は Supabase 側で失敗しました。profiles テーブルの migration 未反映か、認証トリガー設定を確認してください。'
+  }
+
+  if (message.toLowerCase().includes('already registered')) {
+    return 'このメールアドレスは既に登録されています。'
+  }
+
+  return message
+}
+
 export default function SignupPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
@@ -21,11 +33,17 @@ export default function SignupPage() {
     const supabase = createClient()
 
     // usernameの重複チェック
-    const { data: existing } = await supabase
+    const { data: existing, error: existingError } = await supabase
       .from('profiles')
       .select('id')
       .eq('username', username)
-      .single()
+      .maybeSingle()
+
+    if (existingError) {
+      setError('ユーザー名の確認に失敗しました。時間をおいてもう一度お試しください。')
+      setLoading(false)
+      return
+    }
 
     if (existing) {
       setError('このユーザー名は既に使われています')
@@ -42,7 +60,7 @@ export default function SignupPage() {
     })
 
     if (error) {
-      setError(error.message)
+      setError(formatSignupError(error.message))
       setLoading(false)
       return
     }
@@ -74,7 +92,7 @@ export default function SignupPage() {
                 onChange={e => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
                 required
                 placeholder="yourname"
-                className="flex-1 px-3 py-2 text-sm outline-none"
+                className="flex-1 px-3 py-2 text-sm text-zinc-950 placeholder:text-zinc-400 bg-white outline-none"
               />
             </div>
           </div>
@@ -87,7 +105,8 @@ export default function SignupPage() {
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent"
+              placeholder="name@example.com"
+              className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-sm text-zinc-950 placeholder:text-zinc-400 bg-white outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent"
             />
           </div>
           <div>
@@ -100,7 +119,8 @@ export default function SignupPage() {
               onChange={e => setPassword(e.target.value)}
               required
               minLength={8}
-              className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent"
+              placeholder="8文字以上"
+              className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-sm text-zinc-950 placeholder:text-zinc-400 bg-white outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent"
             />
           </div>
 
