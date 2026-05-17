@@ -1,7 +1,9 @@
 'use client'
 
+import Link from 'next/link'
 import { useAccumulationStage } from '@/hooks/useAccumulationStage'
 import { GhostLayer, GhostCard } from '@/components/accumulation/GhostLayer'
+import { cn } from '@/utils/cn'
 import type { Profile, Post, Page } from '@/types'
 
 interface Props {
@@ -30,6 +32,29 @@ function buildGridItems(posts: Post[], ghostPosts: import('@/hooks/useAccumulati
 export function DashboardClient({ profile, posts, postCount, pages }: Props) {
   const { stage, ghostPosts } = useAccumulationStage()
   const gridItems = buildGridItems(posts, ghostPosts, stage)
+  const onboardingSteps = [
+    {
+      title: '1. 最初の投稿を追加',
+      description: '写真か動画を1つ入れると、サイトの土台ができます。',
+      href: '/dashboard/post/new',
+      done: postCount > 0,
+      cta: '投稿する',
+    },
+    {
+      title: '2. ページを作る',
+      description: '旅、カフェ、日常などテーマごとにまとめられます。',
+      href: '/dashboard/pages/new',
+      done: pages.length > 0,
+      cta: 'ページを作る',
+    },
+    {
+      title: '3. 公開方法を決める',
+      description: 'まずは限定公開で始めて、慣れたら公開にするのがおすすめです。',
+      href: '/dashboard/settings',
+      done: posts.some(p => p.visibility !== 'private') || pages.some(p => p.is_public),
+      cta: '設定を見る',
+    },
+  ]
 
   return (
     <div className="min-h-screen bg-zinc-50 relative">
@@ -40,16 +65,16 @@ export function DashboardClient({ profile, posts, postCount, pages }: Props) {
         <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <span className="font-semibold text-zinc-900">Belle Trace</span>
-            <a href="/dashboard/settings" className="text-xs text-zinc-400 hover:text-zinc-600">設定</a>
+            <Link href="/dashboard/settings" className="text-xs text-zinc-400 hover:text-zinc-600">設定</Link>
           </div>
           <div className="flex items-center gap-3">
             <a href={`/${profile?.username}`} target="_blank" className="text-sm text-zinc-500 hover:text-zinc-900">
               サイトを見る →
             </a>
-            <a href="/dashboard/post/new"
+            <Link href="/dashboard/post/new"
               className="px-4 py-1.5 bg-zinc-900 text-white text-sm rounded-full hover:bg-zinc-800 transition-colors">
               投稿する
-            </a>
+            </Link>
           </div>
         </div>
       </header>
@@ -69,26 +94,54 @@ export function DashboardClient({ profile, posts, postCount, pages }: Props) {
           ))}
         </div>
 
+        <section className="rounded-2xl border border-zinc-200 bg-white p-5">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-sm font-semibold text-zinc-900">はじめかた</h2>
+              <p className="mt-1 text-sm text-zinc-500">どこから触ればいいか迷わないように、最短ルートを置いてあります。</p>
+            </div>
+            <p className="shrink-0 text-xs font-medium text-zinc-400">
+              {onboardingSteps.filter(step => step.done).length}/{onboardingSteps.length} 完了
+            </p>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            {onboardingSteps.map(step => (
+              <div key={step.title} className="rounded-xl border border-zinc-100 bg-zinc-50 p-4">
+                <p className="text-sm font-semibold text-zinc-900">{step.title}</p>
+                <p className="mt-1 min-h-12 text-sm leading-relaxed text-zinc-500">{step.description}</p>
+                <div className="mt-3 flex items-center justify-between">
+                  <span className={cn('text-xs font-medium', step.done ? 'text-emerald-600' : 'text-zinc-400')}>
+                    {step.done ? '完了' : '未完了'}
+                  </span>
+                  <Link href={step.href} className="text-sm font-medium text-zinc-900 hover:opacity-70">
+                    {step.cta} →
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
         {/* pages */}
         <section>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-medium text-zinc-700">ページ</h2>
-            <a href="/dashboard/pages/new" className="text-sm text-zinc-500 hover:text-zinc-900">+ 追加</a>
+            <Link href="/dashboard/pages/new" className="text-sm text-zinc-500 hover:text-zinc-900">+ 追加</Link>
           </div>
           {pages.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {pages.map(page => (
-                <a key={page.id} href={`/dashboard/pages/${page.id}`}
+                <Link key={page.id} href={`/dashboard/pages/${page.id}`}
                   className="px-3 py-1.5 bg-white border border-zinc-200 rounded-full text-sm text-zinc-700 hover:border-zinc-400 transition-colors">
                   {page.title}
                   {!page.is_public && <span className="ml-1.5 text-xs text-zinc-300">非公開</span>}
-                </a>
+                </Link>
               ))}
             </div>
           ) : (
             <p className="text-sm text-zinc-400">
               ページはまだありません。
-              <a href="/dashboard/pages/new" className="text-zinc-600 hover:underline ml-1">作成する →</a>
+              <Link href="/dashboard/pages/new" className="text-zinc-600 hover:underline ml-1">作成する →</Link>
             </p>
           )}
         </section>
@@ -100,7 +153,7 @@ export function DashboardClient({ profile, posts, postCount, pages }: Props) {
             <div className="grid grid-cols-3 gap-2">
               {gridItems.map((item, idx) =>
                 item.type === 'post' ? (
-                  <a key={item.data.id} href={`/dashboard/post/${item.data.id}`}
+                  <Link key={item.data.id} href={`/dashboard/post/${item.data.id}`}
                     className="aspect-square bg-zinc-100 rounded-lg overflow-hidden relative group">
                     {item.data.thumbnail_url || item.data.media_url ? (
                       <img src={item.data.thumbnail_url ?? item.data.media_url ?? ''} alt=""
@@ -116,7 +169,7 @@ export function DashboardClient({ profile, posts, postCount, pages }: Props) {
                         {item.data.visibility === 'private' ? '非公開' : '限定'}
                       </span>
                     )}
-                  </a>
+                  </Link>
                 ) : (
                   // Stage 2: ゴーストカード（通知なし・静かに混ざる）
                   <GhostCard key={`ghost-${idx}`} post={item.data} />
@@ -127,9 +180,9 @@ export function DashboardClient({ profile, posts, postCount, pages }: Props) {
             <div className="text-center py-16 text-zinc-400">
               <p className="text-4xl mb-3">+</p>
               <p className="text-sm">最初の投稿をしよう</p>
-              <a href="/dashboard/post/new" className="mt-3 inline-block text-sm text-zinc-600 hover:underline">
+              <Link href="/dashboard/post/new" className="mt-3 inline-block text-sm text-zinc-600 hover:underline">
                 投稿する →
-              </a>
+              </Link>
             </div>
           )}
         </section>

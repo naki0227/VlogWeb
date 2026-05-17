@@ -103,7 +103,7 @@ export default function EditPostPage() {
           {/* キャプション */}
           <textarea value={caption} onChange={e => setCaption(e.target.value)}
             placeholder="キャプションを書く（任意）" rows={3}
-            className="w-full px-4 py-3 bg-white border border-zinc-200 rounded-xl text-sm resize-none outline-none focus:ring-2 focus:ring-zinc-900 placeholder:text-zinc-400" />
+            className="w-full px-4 py-3 bg-white border border-zinc-200 rounded-xl text-sm text-zinc-950 resize-none outline-none focus:ring-2 focus:ring-zinc-900 placeholder:text-zinc-400" />
 
           {/* 公開設定 */}
           <div className="bg-white border border-zinc-100 rounded-xl overflow-hidden">

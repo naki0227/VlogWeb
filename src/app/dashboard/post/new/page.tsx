@@ -24,6 +24,7 @@ export default function NewPostPage() {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [dragOver, setDragOver] = useState(false)
+  const canSubmit = Boolean(file) && !uploading
 
   useEffect(() => {
     const supabase = createClient()
@@ -179,8 +180,8 @@ export default function NewPostPage() {
           <button
             form="post-form"
             type="submit"
-            disabled={uploading}
-            className="text-sm font-medium text-zinc-900 hover:opacity-60 disabled:opacity-30 transition-opacity"
+            disabled={!canSubmit}
+            className="rounded-full bg-zinc-900 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-300"
           >
             {uploading ? '投稿中...' : '投稿する'}
           </button>
@@ -189,6 +190,11 @@ export default function NewPostPage() {
 
       <div className="max-w-2xl mx-auto px-4 py-6">
         <form id="post-form" onSubmit={handleSubmit} className="space-y-5">
+          <div className="rounded-2xl border border-sky-200 bg-sky-50/80 p-4">
+            <p className="text-sm font-semibold text-sky-950">迷ったらこの順番でOK</p>
+            <p className="mt-1 text-sm text-sky-900">1. キャプションを書く  2. 公開範囲を選ぶ  3. 必要ならページに追加して投稿</p>
+          </div>
+
           {/* preview */}
           {previewUrl && (
             <div className="rounded-2xl overflow-hidden bg-black aspect-video">
@@ -216,8 +222,9 @@ export default function NewPostPage() {
               onChange={e => setCaption(e.target.value)}
               placeholder="キャプションを書く（任意）"
               rows={3}
-              className="w-full px-4 py-3 bg-white border border-zinc-200 rounded-xl text-sm resize-none outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent placeholder:text-zinc-400"
+              className="w-full px-4 py-3 bg-white border border-zinc-200 rounded-xl text-sm text-zinc-950 resize-none outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent placeholder:text-zinc-400"
             />
+            <p className="mt-1.5 text-xs text-zinc-500">あとから編集できます。まず一言だけでも大丈夫です。</p>
           </div>
 
           {/* visibility */}
@@ -298,6 +305,14 @@ export default function NewPostPage() {
           {error && (
             <p className="text-sm text-red-500 text-center">{error}</p>
           )}
+
+          <button
+            type="submit"
+            disabled={!canSubmit}
+            className="w-full rounded-xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-300"
+          >
+            {uploading ? '投稿をアップロード中...' : 'この内容で投稿する'}
+          </button>
         </form>
       </div>
     </div>

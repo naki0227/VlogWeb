@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { OAuthButtons } from '@/components/auth/OAuthButtons'
 
 function formatSignupError(message: string) {
   if (message === 'Database error saving new user') {
@@ -77,6 +78,14 @@ export default function SignupPage() {
           <p className="mt-1 text-sm text-zinc-500">自分だけのサイトを作ろう</p>
         </div>
 
+        <OAuthButtons mode="signup" />
+
+        <div className="flex items-center gap-3 text-xs text-zinc-400">
+          <div className="h-px flex-1 bg-zinc-200" />
+          <span>またはメールで登録</span>
+          <div className="h-px flex-1 bg-zinc-200" />
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-zinc-700 mb-1">
@@ -133,6 +142,9 @@ export default function SignupPage() {
           >
             {loading ? '...' : 'アカウント作成'}
           </button>
+          <p className="text-xs leading-relaxed text-zinc-500">
+            作成後は「投稿を追加」→「ページを作成」→「公開設定を選ぶ」の順ですぐ始められます。
+          </p>
         </form>
 
         <p className="text-sm text-center text-zinc-500">

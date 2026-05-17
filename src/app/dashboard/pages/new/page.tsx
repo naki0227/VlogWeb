@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { THEMES, type ThemeConfig } from '@/lib/themes'
 import { PAGE_TEMPLATES, type PageTemplate } from '@/lib/page-templates'
 import { cn } from '@/utils/cn'
+import { Switch } from '@/components/ui/Switch'
 import type { Theme } from '@/types'
 
 type Step = 'template' | 'form'
@@ -64,9 +65,7 @@ export default function NewPagePage() {
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
-    if (!slugEdited) setSlug(slugify(title))
-  }, [title, slugEdited])
+  const derivedSlug = slugEdited ? slug : slugify(title)
 
   function applyTemplate(tpl: PageTemplate) {
     setSelectedTemplate(tpl)
@@ -81,7 +80,9 @@ export default function NewPagePage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!slug) { setError('スラッグを入力してください'); return }
+    const sanitizedSlug = slugify(derivedSlug)
+    if (!title.trim()) { setError('ページタイトルを入力してください'); return }
+    if (!sanitizedSlug) { setError('スラッグを入力してください'); return }
     setError(null)
     setSaving(true)
 
@@ -90,11 +91,11 @@ export default function NewPagePage() {
     if (!user) { router.push('/auth/login'); return }
 
     const { data: existing } = await supabase
-      .from('pages').select('id').eq('user_id', user.id).eq('slug', slug).single()
+      .from('pages').select('id').eq('user_id', user.id).eq('slug', sanitizedSlug).maybeSingle()
     if (existing) { setError('このスラッグは既に使われています'); setSaving(false); return }
 
     const { error: insertError } = await supabase.from('pages').insert({
-      user_id: user.id, slug, title, theme,
+      user_id: user.id, slug: sanitizedSlug, title: title.trim(), theme,
       description: description.trim() || null,
       is_public: isPublic,
     })
@@ -155,21 +156,27 @@ export default function NewPagePage() {
 
       <div className="max-w-2xl mx-auto px-4 py-6">
         <form id="page-form" onSubmit={handleSubmit} className="space-y-6">
+          <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4">
+            <p className="text-sm font-semibold text-amber-950">1分で作る流れ</p>
+            <p className="mt-1 text-sm text-amber-900">1. タイトルを決める  2. テーマを選ぶ  3. まずは非公開で保存して、あとで共有方法を決める</p>
+          </div>
+
           <div className="bg-white border border-zinc-100 rounded-xl overflow-hidden">
             <div className="p-4 space-y-3">
               <div>
                 <label className="block text-xs font-medium text-zinc-500 mb-1.5 uppercase tracking-wide">ページタイトル</label>
                 <input value={title} onChange={e => setTitle(e.target.value)} placeholder="例: 旅の記録" required
-                  className="w-full text-lg font-medium outline-none placeholder:text-zinc-300 text-zinc-900" />
+                  className="w-full rounded-lg bg-zinc-50 px-3 py-2 text-lg font-medium text-zinc-950 outline-none placeholder:text-zinc-400 ring-1 ring-transparent transition focus:bg-white focus:ring-zinc-900" />
               </div>
               <div className="border-t border-zinc-100 pt-3">
                 <label className="block text-xs font-medium text-zinc-500 mb-1.5 uppercase tracking-wide">URL スラッグ</label>
-                <div className="flex items-center gap-1 text-sm">
-                  <span className="text-zinc-400">yourdomain.com/you/</span>
-                  <input value={slug}
+                <div className="flex items-center gap-2 rounded-lg bg-zinc-50 px-3 py-2 text-sm ring-1 ring-transparent transition focus-within:bg-white focus-within:ring-zinc-900">
+                  <span className="whitespace-nowrap text-zinc-500">yourdomain.com/you/</span>
+                  <input value={derivedSlug}
                     onChange={e => { setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')); setSlugEdited(true) }}
-                    placeholder="travel" className="flex-1 outline-none text-zinc-900 font-mono" />
+                    placeholder="travel" className="min-w-0 flex-1 bg-transparent font-mono text-zinc-950 outline-none placeholder:text-zinc-400" />
                 </div>
+                <p className="mt-1.5 text-xs text-zinc-500">半角英数字と `-` を使えます。空ならタイトルから自動生成します。</p>
               </div>
             </div>
           </div>
@@ -178,7 +185,7 @@ export default function NewPagePage() {
             <label className="block text-xs font-medium text-zinc-500 mb-1.5 uppercase tracking-wide">説明（任意）</label>
             <textarea value={description} onChange={e => setDescription(e.target.value)}
               placeholder="このページについての説明" rows={2}
-              className="w-full text-sm outline-none resize-none placeholder:text-zinc-300 text-zinc-900" />
+              className="w-full rounded-lg bg-zinc-50 px-3 py-2 text-sm text-zinc-950 outline-none placeholder:text-zinc-400 resize-none ring-1 ring-transparent transition focus:bg-white focus:ring-zinc-900" />
           </div>
 
           <div>
@@ -190,15 +197,13 @@ export default function NewPagePage() {
             </div>
           </div>
 
-          <div className="bg-white border border-zinc-100 rounded-xl p-4 flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-zinc-800">公開する</p>
-              <p className="text-xs text-zinc-400 mt-0.5">{isPublic ? '誰でもこのページを見れます' : '自分だけ見れます'}</p>
-            </div>
-            <button type="button" onClick={() => setIsPublic(v => !v)}
-              className={cn('relative w-11 h-6 rounded-full transition-colors', isPublic ? 'bg-zinc-900' : 'bg-zinc-200')}>
-              <span className={cn('absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform', isPublic ? 'translate-x-6' : 'translate-x-1')} />
-            </button>
+          <div className="bg-white border border-zinc-100 rounded-xl p-4">
+            <Switch
+              checked={isPublic}
+              onCheckedChange={setIsPublic}
+              label="公開する"
+              description={isPublic ? '誰でもこのページを見られます' : 'まずは自分だけ見られる状態で保存します'}
+            />
           </div>
 
           {selectedTemplate && selectedTemplate.id !== 'blank' && (
@@ -214,6 +219,14 @@ export default function NewPagePage() {
           )}
 
           {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+
+          <button
+            type="submit"
+            disabled={saving || !title.trim()}
+            className="w-full rounded-xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-300"
+          >
+            {saving ? 'ページを作成中...' : 'この内容でページを作成'}
+          </button>
         </form>
       </div>
     </div>

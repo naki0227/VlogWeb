@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { ShareModal } from '@/components/share/ShareModal'
 import { THEMES, type ThemeConfig } from '@/lib/themes'
 import { cn } from '@/utils/cn'
+import { Switch } from '@/components/ui/Switch'
 import type { Post, Theme } from '@/types'
 
 function ThemeCard({ theme, selected, onClick }: { theme: ThemeConfig; selected: boolean; onClick: () => void }) {
@@ -104,7 +105,7 @@ export default function EditPagePage() {
               <div>
                 <label className="block text-xs font-medium text-zinc-500 mb-1.5 uppercase tracking-wide">タイトル</label>
                 <input value={title} onChange={e => setTitle(e.target.value)} required
-                  className="w-full text-lg font-medium outline-none text-zinc-900 placeholder:text-zinc-300" />
+                  className="w-full rounded-lg bg-zinc-50 px-3 py-2 text-lg font-medium text-zinc-950 outline-none placeholder:text-zinc-400 ring-1 ring-transparent transition focus:bg-white focus:ring-zinc-900" />
               </div>
               <div className="border-t border-zinc-100 pt-3">
                 <label className="block text-xs font-medium text-zinc-500 mb-1 uppercase tracking-wide">スラッグ</label>
@@ -117,7 +118,7 @@ export default function EditPagePage() {
           <div className="bg-white border border-zinc-100 rounded-xl p-4">
             <label className="block text-xs font-medium text-zinc-500 mb-1.5 uppercase tracking-wide">説明（任意）</label>
             <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2}
-              className="w-full text-sm outline-none resize-none text-zinc-900 placeholder:text-zinc-300" />
+              className="w-full rounded-lg bg-zinc-50 px-3 py-2 text-sm text-zinc-950 outline-none resize-none placeholder:text-zinc-400 ring-1 ring-transparent transition focus:bg-white focus:ring-zinc-900" />
           </div>
 
           <div>
@@ -129,15 +130,13 @@ export default function EditPagePage() {
             </div>
           </div>
 
-          <div className="bg-white border border-zinc-100 rounded-xl p-4 flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-zinc-800">公開する</p>
-              <p className="text-xs text-zinc-400 mt-0.5">{isPublic ? '誰でも見れます' : '自分だけ見れます'}</p>
-            </div>
-            <button type="button" onClick={() => setIsPublic(v => !v)}
-              className={cn('relative w-11 h-6 rounded-full transition-colors', isPublic ? 'bg-zinc-900' : 'bg-zinc-200')}>
-              <span className={cn('absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform', isPublic ? 'translate-x-6' : 'translate-x-1')} />
-            </button>
+          <div className="bg-white border border-zinc-100 rounded-xl p-4">
+            <Switch
+              checked={isPublic}
+              onCheckedChange={setIsPublic}
+              label="公開する"
+              description={isPublic ? '誰でも見られる状態です' : '非公開のまま保存されます'}
+            />
           </div>
 
           {error && <p className="text-sm text-red-500 text-center">{error}</p>}
