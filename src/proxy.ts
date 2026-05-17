@@ -1,25 +1,29 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
+import { isSameHost, normalizeHost, withoutPort } from '@/lib/domain'
 
 const PUBLIC_DOMAIN = process.env.NEXT_PUBLIC_DOMAIN ?? 'localhost:3000'
 
 export async function proxy(request: NextRequest) {
   const host = request.headers.get('host') ?? ''
+  const normalizedHost = withoutPort(normalizeHost(host))
+  const normalizedPublicDomain = withoutPort(normalizeHost(PUBLIC_DOMAIN))
   const { pathname } = request.nextUrl
 
   // カスタムドメインの処理
   // メインドメイン以外のホストはカスタムドメインとみなし /[username] にrewrite
   const isMainDomain =
-    host === PUBLIC_DOMAIN ||
-    host.endsWith('.vercel.app') ||
-    host.startsWith('localhost')
+    isSameHost(normalizedHost, normalizedPublicDomain) ||
+    normalizedHost.endsWith('.vercel.app') ||
+    normalizedHost.startsWith('localhost') ||
+    normalizedHost.startsWith('127.0.0.1')
 
   if (!isMainDomain) {
     // DBでカスタムドメインに対応するusernameを引く (Edge Function経由)
-    // ここではシンプルにrewriteだけ行い、[username]側でDBルックアップする
+    // ここでは受け口ページにrewriteし、その先で custom_domain を引く
     const url = request.nextUrl.clone()
-    url.pathname = `/_custom-domain${pathname}`
-    url.searchParams.set('host', host)
+    url.pathname = `/custom-domain${pathname}`
+    url.searchParams.set('host', normalizedHost)
     return NextResponse.rewrite(url)
   }
 
