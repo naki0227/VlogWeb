@@ -1,12 +1,14 @@
-import { redirect } from 'next/navigation'
+import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { DashboardClient } from './DashboardClient'
 
-export default async function DashboardPage() {
+export async function GET() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
+
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
   const admin = createAdminClient()
   const [{ data: profile }, { data: posts, count }, { data: pages }] = await Promise.all([
@@ -16,12 +18,10 @@ export default async function DashboardPage() {
     admin.from('pages').select('*').eq('user_id', user.id).order('sort_order'),
   ])
 
-  return (
-    <DashboardClient
-      profile={profile}
-      posts={posts ?? []}
-      postCount={count ?? 0}
-      pages={pages ?? []}
-    />
-  )
+  return NextResponse.json({
+    profile: profile ?? null,
+    posts: posts ?? [],
+    postCount: count ?? 0,
+    pages: pages ?? [],
+  })
 }

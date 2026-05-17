@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { startTransition, useEffect, useState } from 'react'
 import { useAccumulationStage } from '@/hooks/useAccumulationStage'
 import { GhostLayer, GhostCard } from '@/components/accumulation/GhostLayer'
-import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/utils/cn'
 import type { Profile, Post, Page } from '@/types'
 
@@ -63,24 +62,16 @@ export function DashboardClient({ profile, posts, postCount, pages }: Props) {
   ]
 
   useEffect(() => {
-    const supabase = createClient()
-
     async function loadLatestDashboard() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      const [{ data: nextProfile }, { data: nextPosts, count }, { data: nextPages }] = await Promise.all([
-        supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
-        supabase.from('posts').select('*', { count: 'exact' }).eq('user_id', user.id)
-          .order('created_at', { ascending: false }).limit(30),
-        supabase.from('pages').select('*').eq('user_id', user.id).order('sort_order'),
-      ])
+      const res = await fetch('/api/dashboard', { cache: 'no-store' })
+      if (!res.ok) return
+      const data = await res.json()
 
       startTransition(() => {
-        setLiveProfile(nextProfile ?? null)
-        setLivePosts(nextPosts ?? [])
-        setLivePostCount(count ?? 0)
-        setLivePages(nextPages ?? [])
+        setLiveProfile(data.profile ?? null)
+        setLivePosts(data.posts ?? [])
+        setLivePostCount(data.postCount ?? 0)
+        setLivePages(data.pages ?? [])
       })
     }
 
